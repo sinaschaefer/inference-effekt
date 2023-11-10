@@ -1,0 +1,197 @@
+module probs 
+import immutable/list
+
+effect Sample(dist: Distribution): Double
+effect Observe(value: Double, dist: Distribution): Unit
+effect Random(): Double
+effect Factor(prob: Probability): Unit
+
+type Distribution{
+  Gaussian(mean: Double, variance: Double)
+}
+type Probability = Double
+
+def linearRegression(observations: List[(Double, Double)]) = {
+  val m = do Sample(Gaussian(0.0, 3.0))
+  val c = do Sample(Gaussian(0.0, 2.0))
+
+  observations.foreach {
+    case (x,y) => do Observe(y, Gaussian((m * x + c), 1.0))
+  }
+
+  return (m, c)
+}
+
+// draws a Sample from a Distribution
+def draw(dist: Distribution): Double / Random = {
+  dist match {
+    case Gaussian(mean, variance) => 
+      val u1 = do Random();
+      val u2 = do Random();
+
+      val sigma = variance
+
+      //box-muller-Methode
+      val mag = sigma * sqrt(-2.0 * log(u1))
+      val z0 = mag * cos(2.0 * PI * u2) 
+      //val z1 = mag * sin(2.0 * PI * u2)
+
+      return z0 + mean
+  } 
+}
+
+//probability density ffunction for Gaussian distribution
+def density(value: Double, dist: Distribution): Double = {
+  dist match {
+    case Gaussian(mean, variance) =>
+      val density = 1.0/(variance * (sqrt(2.0 * PI))) * exp(0.0 - (square(value - mean)/square(variance))/ 2.0)
+      return density
+  }
+}
+
+// default Sample und Observe handler
+def handleSample[R]{program: () => R / Sample} = {
+  try {program()}
+  with Sample {(dist) => resume(draw(dist))}
+}
+
+def handleObserve[R]{program: () => R / Observe} = {
+  try {program()}
+  with Observe {(value, dist) => do Factor(density(value, dist)); resume(())}
+}
+
+def handleRandom[R]{program: () => R / Random}: R = {
+  try {program()}
+  with Random {() => resume(random())}
+}
+
+//rejection sampling
+def handleFactor[R]{program: () => R / Factor}: R / Random = {
+  try {program()}
+  with Factor {(prob) => 
+    if(do Random() < prob) {resume(())}
+    else {handleFactor{program}}
+  }
+}
+
+//rename
+//sammelt factors auf ig
+def handleFactor2[R]{program: () => R / Factor}: (R, Double)  = {
+  var current = 1.0
+  try {(program(), current)}
+  with Factor {(prob) =>
+    current = current * prob;
+    resume(())}
+}
+
+type Trace = List[Double]
+
+//Metropolis Hastings auxiliary definitions and inference Operations
+// wenn sample dann nächstes element sonst panic("message")
+def handleReusingTrace[R](trace: Trace){program: () => R / Sample} = {
+  var trace = trace
+  try {program()}
+  with Sample {(dist) =>
+    trace match {
+      case Nil() => panic("empty trace")
+      case Cons(t, ts) => trace = ts; resume(t) 
+    }
+  }
+}
+
+// wenn sample dann sample + in trace speichern
+//resune nach cons -> falsche reihenfolge
+//def handleTracing[R]{program: () => R / Sample}: (R, Trace) / Sample = {
+//  var trace = []
+//
+//  try {(program(), trace)}
+//  with Sample {(dist) => 
+//    val sample = do Sample(dist);
+//    trace = Cons(sample, trace)
+//    resume(sample);
+//  }
+//}
+
+def handleTracing[R]{program: () => R / Sample}: (R, Trace) / Sample = {
+  try {(program(), [])}
+  with Sample {(dist) => 
+    val d = do Sample(dist);
+    val (r, trace) = resume(d);
+    (r, Cons(d, trace))
+  }
+}
+
+//generatin proposal by adding gausain noise(normal noise)
+// adding noise to all rekursiv
+def propose(trace: Trace): Trace / Sample = {
+  val noise = do Sample(Gaussian(0.0, 1.0))
+  trace match {
+    case Nil() => panic("empty trace")
+    case Cons(t, ts) => 
+      	val proposal = t + noise
+        Cons(proposal, propose(ts))
+  }
+}
+
+// 1 iteration/step of Metropolis-Hastings algorithm
+def metropolisStep(prob0: Probability, trace0: Trace){program: Trace => Probability}: (Probability, Trace) / {Sample, Factor} = {
+  val trace1 = propose(trace0)
+  val prob1  = program(trace1)
+
+  if(prob1 < prob0){
+    do Factor(prob1 / prob0)
+  }
+  (prob1, trace1)
+}
+
+def metropolisHastings[A](n: Int){program: () => A / {Sample, Factor}} = {
+  val ((result0, trace0), prob0) = handleFactor2{
+    handleTracing{
+      program()
+    }
+  }
+
+  var nextprob = prob0
+  var nexttrace = trace0
+
+  while (n > 0) {
+    //mStep
+    val (nextprob, nexttrace) =
+    handleSample{
+      handleFactor{
+        metropolisStep(nextprob, nexttrace){program()} // idek how to do this
+      }
+    }
+    var n = n - 1
+    return (nextprob, nexttrace)
+  }
+  //n mal metropolis step um nächste trace & prob zu bekommen
+  //handleFactor bei jedem aufruf von metropolisStep
+  //handleRandom handleSample auch bei jedem aufruf
+  // des mit A für mstep noch
+}
+
+def main() = {
+  // testing of linear regression for m= 1, c = 0
+  repeat(10){
+    val result = handleRandom{
+      handleFactor{
+        handleSample{
+          handleObserve{
+            linearRegression([(5.0, 5.0), (1.0, 1.0), (-2.0, -2.0), (3.0, 3.0), (20.0, 20.0), (5.0, 5.0)])
+          }
+        }
+      }
+    }
+  
+    println(result)
+  }
+
+  //repeat(50){
+  //  val dr = handleRandom{
+  //    draw(Gaussian(0.0, 1.0))
+  //  }
+  //  println(dr)
+  //}
+  
+}
