@@ -134,9 +134,9 @@ def propose(trace: Trace): Trace / Sample = {
 }
 
 // 1 iteration/step of Metropolis-Hastings algorithm
-def metropolisStep(prob0: Probability, trace0: Trace){program: Trace => Probability}: (Probability, Trace) / {Sample, Factor} = {
+def metropolisStep[A](prob0: Probability, trace0: Trace){program: Trace => (A, Probability)}: (Probability, Trace) / {Sample, Factor} = {
   val trace1 = propose(trace0)
-  val prob1  = program(trace1)
+  val (a, prob1) = program(trace1)
 
   if(prob1 < prob0){
     do Factor(prob1 / prob0)
@@ -153,22 +153,21 @@ def metropolisHastings[A](n: Int){program: () => A / {Sample, Factor}} = {
 
   var nextprob = prob0
   var nexttrace = trace0
+  var steps = n
 
-  while (n > 0) {
+  //n mal metropolis step um nächste trace & prob zu bekommen
+  //handleFactor bei jedem aufruf von metropolisStep
+  //handleRandom handleSample auch bei jedem aufruf ??
+  while (steps > 0) {
     //mStep
     val (nextprob, nexttrace) =
     handleSample{
       handleFactor{
-        metropolisStep(nextprob, nexttrace){program()} // idek how to do this
+        metropolisStep(nextprob, nexttrace){ trace => handleFactor2 { handleReusingTrace(trace) { program() } } }
       }
     }
-    var n = n - 1
-    return (nextprob, nexttrace)
+    steps = steps - 1
   }
-  //n mal metropolis step um nächste trace & prob zu bekommen
-  //handleFactor bei jedem aufruf von metropolisStep
-  //handleRandom handleSample auch bei jedem aufruf
-  // des mit A für mstep noch
 }
 
 def main() = {
