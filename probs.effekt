@@ -5,11 +5,15 @@ effect Sample(dist: Distribution): Double
 effect Observe(value: Double, dist: Distribution): Unit
 effect Random(): Double
 effect Factor(prob: Probability): Unit
+interface Emit[A] {
+  def emit(element: A): Unit
+}
 
 type Distribution{
   Gaussian(mean: Double, variance: Double)
 }
 type Probability = Double
+type Trace = List[Double]
 
 def linearRegression(observations: List[(Double, Double)]) = {
   val m = do Sample(Gaussian(0.0, 3.0))
@@ -40,7 +44,7 @@ def draw(dist: Distribution): Double / Random = {
   } 
 }
 
-//probability density ffunction for Gaussian distribution
+//probability density function for Gaussian distribution
 def density(value: Double, dist: Distribution): Double = {
   dist match {
     case Gaussian(mean, variance) =>
@@ -75,7 +79,6 @@ def handleFactor[R]{program: () => R / Factor}: R / Random = {
 }
 
 //rename
-//sammelt factors auf ig
 def handleFactor2[R]{program: () => R / Factor}: (R, Double)  = {
   var current = 1.0
   try {(program(), current)}
@@ -84,12 +87,10 @@ def handleFactor2[R]{program: () => R / Factor}: (R, Double)  = {
     resume(())}
 }
 
-type Trace = List[Double]
-
 //Metropolis Hastings auxiliary definitions and inference Operations
 // wenn sample dann nächstes element sonst panic("message")
-def handleReusingTrace[R](trace: Trace){program: () => R / Sample} = {
-  var trace = trace
+def handleReusingTrace[R](trace0: Trace){program: () => R / Sample} = {
+  var trace = trace0
   try {program()}
   with Sample {(dist) =>
     trace match {
@@ -121,58 +122,101 @@ def handleTracing[R]{program: () => R / Sample}: (R, Trace) / Sample = {
   }
 }
 
-//generatin proposal by adding gausain noise(normal noise)
-// adding noise to all rekursiv
-def propose(trace: Trace): Trace / Sample = {
-  val noise = do Sample(Gaussian(0.0, 1.0))
-  trace match {
-    case Nil() => panic("empty trace")
-    case Cons(t, ts) => 
-      	val proposal = t + noise
-        Cons(proposal, propose(ts))
+def handleEmit[A,R]{program: () => R / Emit[A]} = {
+  try {program()}
+  with Emit[A] {
+    def emit(element) = {println(element); resume(())}}
+}
+
+def handleLimitEmit[A,R](n: Int){program: () => R / Emit[A]} = {
+  var steps = n
+  try {program(); ()}
+  with Emit[A] {
+    def emit(element) = {
+      println(element)
+      steps = steps - 1
+      if (0 < steps) {resume(())}
+    }
   }
 }
 
+//generatin proposal by adding gausain noise(normal noise)
+// adding noise to all rekursiv
+def propose(trace: Trace): Trace / Sample = {
+  trace match {
+    case Nil() => [] 
+    case Cons(t, ts) => 
+      val noise = do Sample(Gaussian(0.0, 1.0))
+      val proposal = t + noise
+      Cons(proposal, propose(ts)) 
+  }
+}
+
+
 // 1 iteration/step of Metropolis-Hastings algorithm
-def metropolisStep[A](prob0: Probability, trace0: Trace){program: Trace => (A, Probability)}: (Probability, Trace) / {Sample, Factor} = {
+def metropolisStep[A](prob0: Probability, trace0: Trace){program: Trace => (A, Probability)} = {
   val trace1 = propose(trace0)
-  val (a, prob1) = program(trace1)
+  val (result1, prob1) = program(trace1)
 
   if(prob1 < prob0){
     do Factor(prob1 / prob0)
   }
-  (prob1, trace1)
+  ((result1, trace1), prob1)
 }
 
-def metropolisHastings[A](n: Int){program: () => A / {Sample, Factor}} = {
+def metropolisHastings[A]{program: () => A / {Sample, Factor}} = {
   val ((result0, trace0), prob0) = handleFactor2{
-    handleTracing{
-      program()
+    handleRandom{
+      handleSample{
+        handleTracing{
+          program()
+        }
+      }
     }
   }
 
   var nextprob = prob0
   var nexttrace = trace0
-  var steps = n
+  var nextresult = result0
 
   //n mal metropolis step um nächste trace & prob zu bekommen
   //handleFactor bei jedem aufruf von metropolisStep
-  //handleRandom handleSample auch bei jedem aufruf ??
-  while (steps > 0) {
+  //handleRandom handleSample auch bei jedem aufruf 
+  while (true) {
     //mStep
-    val (nextprob, nexttrace) =
-    handleSample{
-      handleFactor{
-        metropolisStep(nextprob, nexttrace){ trace => handleFactor2 { handleReusingTrace(trace) { program() } } }
+    val ((nextresult, nexttrace), nextprob) =
+    handleRandom{
+      handleSample{
+        handleFactor{
+          metropolisStep(nextprob, nexttrace){ trace => handleFactor2 { handleReusingTrace(trace) { program() } } }
+        }
       }
     }
-    steps = steps - 1
+    do emit(nextresult)
   }
+}
+
+def sliceSampling[R](){program: () => R / Factor} = {
+  val (result, prob) = handleFactor2{program()}
+  
+  def step(result0: R, prob0: Probability) = handleFactor{
+    val (result1, prob1) = handleFactor2{program()}
+    if (prob1 < prob0) {do Factor(prob1 / prob0)}
+    (result1, prob1)
+  }
+
+  def loop(result: R, prob: Probability): Unit / Emit[R] = {
+    do emit(result)
+    val (result1, prob1) = step(result, prob)
+    loop(result1, prob1)
+  }
+
+  loop(result, prob)
 }
 
 def main() = {
   // testing of linear regression for m= 1, c = 0
-  repeat(10){
+  repeat(1){
     val result = handleRandom{
       handleFactor{
         handleSample{
@@ -186,11 +230,32 @@ def main() = {
     println(result)
   }
 
+  // testing the draw function
   //repeat(50){
   //  val dr = handleRandom{
   //    draw(Gaussian(0.0, 1.0))
   //  }
   //  println(dr)
   //}
+
+  // testing handleReusingTrace
+  // "Cannot access 'trace' before initialization" ???
+  //val res = handleReusingTrace([0.5, 1.2, 0.7, 2.1]){ () => 
+  //  val a = do Sample(Gaussian(0.0, 1.0))  
+  //  return a
+  //}
+  //println(res)
+
+  // testing Metropolis-Hastings
+  handleLimitEmit[Double,Unit](10){ metropolisHastings{() => 
+      do Sample (Gaussian(0.0, 1.0))
+    }
+  }
+
+  println("\n")
+  // testing sliceSampling
+  handleLimitEmit[Double, Unit](10){handleRandom{handleSample{sliceSampling{
+    do Sample(Gaussian(0.0, 1.0))
+  }}}}
   
 }
