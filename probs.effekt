@@ -4,7 +4,7 @@ import immutable/list
 effect Sample(dist: Distribution): Double
 effect Observe(value: Double, dist: Distribution): Unit
 effect Random(): Double
-effect Factor(prob: Probability): Unit
+effect Weight(prob: Probability): Unit
 interface Emit[A] {
   def emit(element: A): Unit
 }
@@ -61,7 +61,7 @@ def handleSample[R]{program: () => R / Sample} = {
 
 def handleObserve[R]{program: () => R / Observe} = {
   try {program()}
-  with Observe {(value, dist) => do Factor(density(value, dist)); resume(())}
+  with Observe {(value, dist) => do Weight(density(value, dist)); resume(())}
 }
 
 def handleRandom[R]{program: () => R / Random}: R = {
@@ -70,19 +70,19 @@ def handleRandom[R]{program: () => R / Random}: R = {
 }
 
 //rejection sampling
-def handleFactor[R]{program: () => R / Factor}: R / Random = {
+def handleWeight[R]{program: () => R / Weight}: R / Random = {
   try {program()}
-  with Factor {(prob) => 
+  with Weight {(prob) => 
     if(do Random() < prob) {resume(())}
-    else {handleFactor{program}}
+    else {handleWeight{program}}
   }
 }
 
 //rename
-def handleFactor2[R]{program: () => R / Factor}: (R, Double)  = {
+def handleWeight2[R]{program: () => R / Weight}: (R, Double)  = {
   var current = 1.0
   try {(program(), current)}
-  with Factor {(prob) =>
+  with Weight {(prob) =>
     current = current * prob;
     resume(())}
 }
@@ -159,13 +159,13 @@ def metropolisStep[A](prob0: Probability, trace0: Trace){program: Trace => (A, P
   val (result1, prob1) = program(trace1)
 
   if(prob1 < prob0){
-    do Factor(prob1 / prob0)
+    do Weight(prob1 / prob0)
   }
   ((result1, trace1), prob1)
 }
 
-def metropolisHastings[A]{program: () => A / {Sample, Factor}} = {
-  val ((result0, trace0), prob0) = handleFactor2{
+def metropolisHastings[A]{program: () => A / {Sample, Weight}} = {
+  val ((result0, trace0), prob0) = handleWeight2{
     handleRandom{
       handleSample{
         handleTracing{
@@ -180,15 +180,15 @@ def metropolisHastings[A]{program: () => A / {Sample, Factor}} = {
   var nextresult = result0
 
   //n mal metropolis step um nächste trace & prob zu bekommen
-  //handleFactor bei jedem aufruf von metropolisStep
+  //handleWeight bei jedem aufruf von metropolisStep
   //handleRandom handleSample auch bei jedem aufruf 
   while (true) {
     //mStep
     val ((nextresult, nexttrace), nextprob) =
     handleRandom{
       handleSample{
-        handleFactor{
-          metropolisStep(nextprob, nexttrace){ trace => handleFactor2 { handleReusingTrace(trace) { program() } } }
+        handleWeight{
+          metropolisStep(nextprob, nexttrace){ trace => handleWeight2 { handleReusingTrace(trace) { program() } } }
         }
       }
     }
@@ -196,12 +196,12 @@ def metropolisHastings[A]{program: () => A / {Sample, Factor}} = {
   }
 }
 
-def sliceSampling[R](){program: () => R / Factor} = {
-  val (result, prob) = handleFactor2{program()}
+def sliceSampling[R](){program: () => R / Weight} = {
+  val (result, prob) = handleWeight2{program()}
   
-  def step(result0: R, prob0: Probability) = handleFactor{
-    val (result1, prob1) = handleFactor2{program()}
-    if (prob1 < prob0) {do Factor(prob1 / prob0)}
+  def step(result0: R, prob0: Probability) = handleWeight{
+    val (result1, prob1) = handleWeight2{program()}
+    if (prob1 < prob0) {do Weight(prob1 / prob0)}
     (result1, prob1)
   }
 
@@ -218,7 +218,7 @@ def main() = {
   // testing of linear regression for m= 1, c = 0
   repeat(1){
     val result = handleRandom{
-      handleFactor{
+      handleWeight{
         handleSample{
           handleObserve{
             linearRegression([(5.0, 5.0), (1.0, 1.0), (-2.0, -2.0), (3.0, 3.0), (20.0, 20.0), (5.0, 5.0)])
