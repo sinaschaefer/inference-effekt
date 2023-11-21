@@ -25,3 +25,4 @@ Emit is defined as an interface because of its type polimorphic properties but i
 
 ## Metropolis-Hasting
 The algorithm got split into two seperate functions. The helper function `metropolisStep`, which performes one iteration of the algorithm, and the main algorithm `metropolisHastings` which performs (possibly indefinete) cycles of the algorithm using `metropolisStep`.  
+`metropolisStep` also makes use of the function `propose` which recursively adds Gaussian noise to an existing trace and uses the resulting trace as a proposal for the new trace.
