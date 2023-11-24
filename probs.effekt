@@ -11,6 +11,7 @@ interface Emit[A] {
 
 type Distribution{
   Gaussian(mean: Double, variance: Double)
+  Uniform(lower: Double, upper: Double)
 }
 type Probability = Double
 type Trace = List[Double]
@@ -41,6 +42,10 @@ def draw(dist: Distribution): Double / Random = {
       //val z1 = mag * sin(2.0 * PI * u2)
 
       return z0 + mean
+    
+    case Uniform(lower, upper) => 
+      val x = do Random()
+      return (lower + x * upper)
   } 
 }
 
@@ -50,6 +55,10 @@ def density(value: Double, dist: Distribution): Double = {
     case Gaussian(mean, variance) =>
       val density = 1.0/(variance * (sqrt(2.0 * PI))) * exp(0.0 - (square(value - mean)/square(variance))/ 2.0)
       return density
+    
+    case Uniform(lower, upper) => 
+      if(lower < value && value < upper){ 1.0 / (upper - lower)}
+      else {0.0}
   }
 }
 
@@ -229,6 +238,7 @@ def main() = {
   
     println(result)
   }
+  //println("\n")
 
   // testing the draw function
   //repeat(50){
@@ -239,12 +249,12 @@ def main() = {
   //}
 
   // testing handleReusingTrace
-  // "Cannot access 'trace' before initialization" ???
-  //val res = handleReusingTrace([0.5, 1.2, 0.7, 2.1]){ () => 
+  //val res = handleReusingTrace([0.7, 2.1]){ () => 
   //  val a = do Sample(Gaussian(0.0, 1.0))  
   //  return a
   //}
   //println(res)
+  //println("\n")
 
   // testing Metropolis-Hastings
   handleLimitEmit[Double,Unit](10){ metropolisHastings{() => 
@@ -257,5 +267,5 @@ def main() = {
   handleLimitEmit[Double, Unit](10){handleRandom{handleSample{sliceSampling{
     do Sample(Gaussian(0.0, 1.0))
   }}}}
-  
+
 }
