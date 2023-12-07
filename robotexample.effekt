@@ -1,0 +1,38 @@
+import probs
+
+record State(x: Double, y: Double, vx: Double, vy: Double)
+
+type Measurement = Double
+
+// movement of the robot in one time intervall
+def move(s: State): State / Sample = {
+  s match {
+    case State(x, y, vx, vy) =>
+      val xa = do Sample(Gaussian(0.0, 1.0))
+      val ya = do Sample(Gaussian(0.0, 1.0))
+      return State(x+vx+xa, y+vy+ya, vx+xa, vy+ya)
+  }
+}
+
+// 
+def measure(s: State, m: Measurement): Unit / Observe = {
+  s match {
+    case State(x, y, vx, vy) =>
+      val dist = sqrt(square(x) + square(y))
+      do Observe(m, Gaussian(dist, 1.0))
+  }
+}
+
+// approximates next step based on current position and next distance measurement
+def step(s0: State, m1: Measurement): State / {Sample,Observe} = {
+  val se = move(s0)
+  measure(se, m1)
+  return se
+}
+
+def main() = {
+  handleLimitEmit[State, Unit](50){handleRandom{handleSample{sliceSampling[State]{handleObserve{
+    val init = State(0.0, 3.0, 2.0, 0.0)
+    step(init, 5.0)
+  }}}}}
+}
