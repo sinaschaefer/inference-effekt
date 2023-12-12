@@ -8,7 +8,9 @@
     4. [Weight](#weight-(factor))
     5. [Emit](#emit)
 2. [Metropolis-Hasting](#metropolis-hastings)
-    1. Tracing and trace handling (#tracing-and-trace-handling)
+3. [Examples](#examples)
+    1. [2D-Robot](#2d-robot)
+    2. [SIR model](#sir-model)
 
 ## Effects
 ### Sample
@@ -26,3 +28,14 @@ Emit is defined as an interface because of its type polimorphic properties but i
 ## Metropolis-Hasting
 The algorithm got split into two seperate functions. The helper function `metropolisStep`, which performes one iteration of the algorithm, and the main algorithm `metropolisHastings` which performs (possibly indefinete) cycles of the algorithm using `metropolisStep`.  
 `metropolisStep` also makes use of the function `propose` which recursively adds Gaussian noise to an existing trace and uses the resulting trace as a proposal for the new trace.
+
+## Examples
+### 2D-Robot
+In this example we trace/approximate the path of a robot that moves over a cartesian plane. At the center of the plane (0,0) is a radar station that measures the distance to the robot with noise.
+During one unit of time the robot changes its position based on the current trajectory and also changes its velocity in both x and y direction by adding gaussian noise. This is done via the `move` function. 
+With `meassure` we can approximate the new position of the robot based on the new meassurement we get, but also considering the velocity of the robot.
+
+### SIR model
+Simulates a population with susceptible, infected and recovered patients. 
+The function `step` imitates the transition of patients from e.g. susceptible to infected with the given transition probabilities. The transition probabilities do not correlate to any real live example but rather are just a way of visualization.
+With `test` we can test the population for the diseas/virus but we also have to take into consideration that the tests can yield false positives(FP) or false negatives(FN).
