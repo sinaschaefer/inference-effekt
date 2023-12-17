@@ -1,0 +1,30 @@
+import probs
+import immutable/list
+
+def linearRegression(observations: List[(Double, Double)]) = {
+  val m = do Sample(Gaussian(0.0, 3.0))
+  val c = do Sample(Gaussian(0.0, 2.0))
+
+  observations.foreach {
+    case (x,y) => do Observe(y, Gaussian((m * x + c), 1.0))
+  }
+
+  return (m, c)
+}
+
+def main() = {
+  // testing of linear regression for m= 1, c = 0
+  repeat(10){
+    val result = handleRandom{
+      handleWeight{
+        handleSample{
+          handleObserve{
+            linearRegression([(5.0, 5.0), (1.0, 1.0), (-2.0, -2.0), (3.0, 3.0), (20.0, 20.0), (5.0, 5.0)])
+          }
+        }
+      }
+    }
+  
+    println(result)
+  }
+}
