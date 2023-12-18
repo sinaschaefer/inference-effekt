@@ -1,6 +1,9 @@
 module probs 
 import immutable/list
 
+extern pure def pow(x: Double, y: Double): Double = "Math.pow(x, y)"
+extern pure def gamma(n: Double): Double = "Math.gamma(n)"
+
 effect Sample(dist: Distribution): Double
 effect Observe(value: Double, dist: Distribution): Unit
 effect Random(): Double
@@ -12,20 +15,10 @@ interface Emit[A] {
 type Distribution{
   Gaussian(mean: Double, variance: Double)
   Uniform(lower: Double, upper: Double)
+  Beta(alpha: Double, beta: Double)
 }
 type Probability = Double
 type Trace = List[Double]
-
-def linearRegression(observations: List[(Double, Double)]) = {
-  val m = do Sample(Gaussian(0.0, 3.0))
-  val c = do Sample(Gaussian(0.0, 2.0))
-
-  observations.foreach {
-    case (x,y) => do Observe(y, Gaussian((m * x + c), 1.0))
-  }
-
-  return (m, c)
-}
 
 // draws a Sample from a Distribution
 def draw(dist: Distribution): Double / Random = {
@@ -46,6 +39,11 @@ def draw(dist: Distribution): Double / Random = {
     case Uniform(lower, upper) => 
       val x = do Random()
       return (lower + x * upper)
+    
+    case Beta(alpha, beta) => 
+      val mean = 0.5
+      val variance = 1.0 /(4.0 * ((2.0 * alpha) + 1.0))
+      return draw(Gaussian(mean, variance))
   } 
 }
 
@@ -59,6 +57,10 @@ def density(value: Double, dist: Distribution): Double = {
     case Uniform(lower, upper) => 
       if(lower < value && value < upper){ 1.0 / (upper - lower)}
       else {0.0}
+    
+    case Beta(alpha, beta) =>
+      val density = (gamma(alpha + beta)/(gamma(alpha) * gamma(beta))) * pow(value, (alpha - 1.0)) * pow((value - 1.0), (beta - 1.0))
+      return density
   }
 }
 
@@ -224,22 +226,6 @@ def sliceSampling[R](){program: () => R / Weight} = {
 }
 
 def main() = {
-  // testing of linear regression for m= 1, c = 0
-  repeat(1){
-    val result = handleRandom{
-      handleWeight{
-        handleSample{
-          handleObserve{
-            linearRegression([(5.0, 5.0), (1.0, 1.0), (-2.0, -2.0), (3.0, 3.0), (20.0, 20.0), (5.0, 5.0)])
-          }
-        }
-      }
-    }
-  
-    println(result)
-  }
-  //println("\n")
-
   // testing the draw function
   //repeat(50){
   //  val dr = handleRandom{
