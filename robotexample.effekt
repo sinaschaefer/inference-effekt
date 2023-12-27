@@ -14,7 +14,7 @@ def move(s: State): State / Sample = {
   }
 }
 
-// 
+// measures distance to robot and observes how probable position is given current state
 def measure(s: State, m: Measurement): Unit / Observe = {
   s match {
     case State(x, y, vx, vy) =>

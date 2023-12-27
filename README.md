@@ -9,8 +9,9 @@
     5. [Emit](#emit)
 2. [Metropolis-Hasting](#metropolis-hastings)
 3. [Examples](#examples)
-    1. [2D-Robot](#2d-robot)
-    2. [SIR model](#sir-model)
+    1. [Linear Regression](#linear-regression)
+    2. [2D-Robot](#2d-robot)
+    3. [SIR model](#sir-model)
 
 ## Effects
 ### Sample
@@ -30,6 +31,9 @@ The algorithm got split into two seperate functions. The helper function `metrop
 `metropolisStep` also makes use of the function `propose` which recursively adds Gaussian noise to an existing trace and uses the resulting trace as a proposal for the new trace.
 
 ## Examples
+### Linear Regression
+This example uses linear regression which is an analysis method to predict values based on values that are already given. Here we want to approximate the slope and the y-intercept of a linear graph given points the graph crosses.
+
 ### 2D-Robot
 In this example we trace/approximate the path of a robot that moves over a cartesian plane. At the center of the plane (0,0) is a radar station that measures the distance to the robot with noise.
 During one unit of time the robot changes its position based on the current trajectory and also changes its velocity in both x and y direction by adding gaussian noise. This is done via the `move` function. 
