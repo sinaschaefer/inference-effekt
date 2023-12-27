@@ -1,0 +1,27 @@
+import probs
+
+//population so that number of s + i + r = 1
+record Population(susceptible: Double, infected: Double, recovered: Double)
+
+//multiply s,i,r parts of population with transition probabilitys to get new state of population
+def step(p: Population): Population = {
+  p match {
+    case Population(s, i, r) =>
+      val s1 = 0.5 * s
+      val i1 = 0.3 * i + 0.5 * s + 0.1 * r 
+      val r1 =  0.9 * r + 0.7 * i
+      return Population(s1, i1, r1)
+  }
+}
+
+//testing the popultaion(like covid test)
+def test(p: Population, pr: Double) = {
+  p match {
+    case Population(s, i, r) =>
+      do Observe(pr, Beta(2.0, 3.0))
+  }
+}
+
+def main() = {
+  println(step(Population(0.7, 0.2, 0.1))) //result: Population(0.35, 0.42, 0.23)
+}
