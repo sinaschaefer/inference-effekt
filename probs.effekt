@@ -191,8 +191,8 @@ def handleLimitEmit[A,R](n: Int){program: () => R / Emit[A]} = {
   }
 }
 
-//generatin proposal by adding gausain noise(normal noise)
-// adding noise to all rekursiv
+// generatin proposal by adding gausain noise(normal noise)
+// adding noise to all rekursiv -> independent MH
 def propose(trace: Trace): Trace / Sample = {
   trace match {
     case Nil() => [] 
@@ -200,6 +200,18 @@ def propose(trace: Trace): Trace / Sample = {
       val noise = do Sample(Gaussian(0.0, 1.0))
       val proposal = t + noise
       Cons(proposal, propose(ts)) 
+  }
+}
+
+//generation proposal for single-site MH
+// adding noise to only one sample per iteration otherwise reuse trace
+def proposeSingleSite(trace: Trace): Trace / Sample = {
+  trace match {
+    case Nil() => []
+    case Cons(t, ts) =>
+      val noise = do Sample(Gaussian(0.0, 1.0))
+      val proposal = t + noise
+      Cons(proposal, ts)
   }
 }
 
@@ -262,6 +274,7 @@ def metropolisHastings[A]{program: () => A / {Sample, Weight}} = {
   loop(result0, trace0, prob0)
 }
 
+//MCMC algorithm for drawing 'random' numbers from distribution
 def sliceSampling[R](){program: () => R / Weight} = {
   val (result, prob) = handleWeight{program()}
   
