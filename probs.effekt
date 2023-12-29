@@ -81,16 +81,15 @@ def handleRandom[R]{program: () => R / Random}: R = {
 }
 
 //rejection sampling
-def handleWeight[R]{program: () => R / Weight}: R / Random = {
+def rejectionSampling[R]{program: () => R / Weight}: R / Random = {
   try {program()}
   with Weight {(prob) => 
     if(do Random() < prob) {resume(())}
-    else {handleWeight{program}}
+    else {rejectionSampling{program}}
   }
 }
 
-//rename
-def handleWeight2[R]{program: () => R / Weight}: (R, Double)  = {
+def handleWeight[R]{program: () => R / Weight}: (R, Double)  = {
   var current = 1.0
   try {(program(), current)}
   with Weight {(prob) =>
@@ -176,7 +175,7 @@ def metropolisStep[A](prob0: Probability, trace0: Trace){program: Trace => (A, P
 }
 
 def metropolisHastings[A]{program: () => A / {Sample, Weight}} = {
-  val ((result0, trace0), prob0) = handleWeight2{
+  val ((result0, trace0), prob0) = handleWeight{
     handleRandom{
       handleSample{
         handleTracing{
@@ -198,8 +197,8 @@ def metropolisHastings[A]{program: () => A / {Sample, Weight}} = {
     val ((nextresult, nexttrace), nextprob) =
     handleRandom{
       handleSample{
-        handleWeight{
-          metropolisStep(nextprob, nexttrace){ trace => handleWeight2 { handleReusingTrace(trace) { program() } } }
+        rejectionSampling{
+          metropolisStep(nextprob, nexttrace){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
         }
       }
     }
@@ -208,10 +207,10 @@ def metropolisHastings[A]{program: () => A / {Sample, Weight}} = {
 }
 
 def sliceSampling[R](){program: () => R / Weight} = {
-  val (result, prob) = handleWeight2{program()}
+  val (result, prob) = handleWeight{program()}
   
-  def step(result0: R, prob0: Probability) = handleWeight{
-    val (result1, prob1) = handleWeight2{program()}
+  def step(result0: R, prob0: Probability) = rejectionSampling{
+    val (result1, prob1) = handleWeight{program()}
     if (prob1 < prob0) {do Weight(prob1 / prob0)}
     (result1, prob1)
   }
