@@ -22,7 +22,7 @@ The default observe handler uses the effect `Weight` to weigh the density of the
 ### Random
 With the bulit in function `random`, this effect generates a random value as a Double.
 ### Weight (Factor)
-The first handler `handleWeight` performs rejection sampling and the second handler `handleWeight2` idk ???
+The first handler `rejectionSampling` performs rejection sampling and the second handler `handleWeight` **TODO!**
 ### Emit
 Emit is defined as an interface because of its type polimorphic properties but it acts just like any other effect in this program. The default handler performes a `println` of the current element, often used in loops. This effect is also used to limit possibly indefinetly running loops usign the `handleLimitEmit`. This handler counts the steps or loops of a given function it runs, and only resumes if the given number of steps is not jet surpased. Like the default handler, the limiter prints the current element in each cycle of the loop. 
 
