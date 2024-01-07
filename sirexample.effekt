@@ -4,7 +4,7 @@ import probs
 record Population(susceptible: Double, infected: Double, recovered: Double)
 
 //multiply s,i,r parts of population with transition probabilitys to get new state of population
-def step(p: Population): Population = {
+def progression(p: Population): Population = {
   p match {
     case Population(s, i, r) =>
       val s1 = 0.5 * s
@@ -15,13 +15,25 @@ def step(p: Population): Population = {
 }
 
 //testing the popultaion(like covid test)
-def test(p: Population, pr: Double) = {
+def test(p: Population, pr: Double): Unit / Observe = {
   p match {
     case Population(s, i, r) =>
       do Observe(pr, Beta(2.0, 3.0))
   }
 }
 
+//approximate next state of population based on current state
+def step(p0: Population, pr1: Double): Population / {Sample, Observe} = {
+  val p1 = progression(p0)
+  test(p1, pr1)
+  return p1
+}
+
 def main() = {
-  println(step(Population(0.7, 0.2, 0.1))) //result: Population(0.35, 0.42, 0.23)
+  println(progression(Population(0.7, 0.2, 0.1))) //result: Population(0.35, 0.42, 0.23)
+
+  handleLimitEmit[Population, Unit](1){handleRandom{handleSample{sliceSampling[Population]{handleObserve{
+    val init = Population(0.7, 0.2, 0.1)
+    step(init, 0.3)
+  }}}}}
 }
