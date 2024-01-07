@@ -39,11 +39,6 @@ def main() = {
   
   println("\n")
 
-  handleLimitEmit[State,Unit](2){metropolisHastings[State]{handleObserve{
-    val init = State(0.0, 3.0, 2.0, 0.0)
-    step(init, 5.0)
-  }}}
-
   println("\n")
 
   handleLimitEmit[State, Unit](1){handleRandom{handleSample{sliceSampling[State]{handleObserve{
@@ -60,4 +55,21 @@ def main() = {
     }
     return nextState
   }}}}}
+
+  // testing robot with MH and multiple steps
+  println("\n testing 'new' MH version:")
+  handleLimitEmit[State, Unit](1){metropolisHastings[State]{handleObserve{
+    var nextState = State(0.0, 3.0, 2.0, 0.0)
+    var nextdis = 5.0
+    var m = 5
+    
+    while(m > 0){
+      nextState = step(nextState, nextdis)
+      val noise = do Sample(Gaussian(0.0, 1.0))
+      nextdis = nextdis + noise
+      println (nextState)
+      m = m - 1
+    }
+    return nextState
+  }}}
 }

@@ -226,25 +226,40 @@ def metropolisHastings[A]{program: () => A / {Sample, Weight}} = {
     }
   }
 
-  var nextprob = prob0
-  var nexttrace = trace0
-  var nextresult = result0
+  //var nextprob = prob0
+  //var nexttrace = trace0
+  //var nextresult = result0
 
   //n mal metropolis step um nächste trace & prob zu bekommen
   //handleWeight bei jedem aufruf von metropolisStep
   //handleRandom handleSample auch bei jedem aufruf 
-  while (true) {
-    //mStep
-    val ((nextresult, nexttrace), nextprob) =
+  //while (true) {
+  //  //mStep
+  //  val ((nextresult, nexttrace), nextprob) =
+  //  handleRandom{
+  //    handleSample{
+  //      rejectionSampling{
+  //        metropolisStep(nextprob, nexttrace){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
+  //      }
+  //    }
+  //  }
+  //  do emit(nextresult)
+  //}
+
+  def loop(result: A, trace: Trace, prob: Probability): Unit / Emit[A] = {
+    do emit(result)
+    val ((result1, trace1), prob1) =
     handleRandom{
       handleSample{
         rejectionSampling{
-          metropolisStep(nextprob, nexttrace){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
+          metropolisStep(prob, trace){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
         }
       }
     }
-    do emit(nextresult)
+    loop(result1, trace1, prob1)
   }
+
+  loop(result0, trace0, prob0)
 }
 
 def sliceSampling[R](){program: () => R / Weight} = {
@@ -283,10 +298,10 @@ def main() = {
   //println("\n")
 
   // testing Metropolis-Hastings
-  handleLimitEmit[Double,Unit](10){ metropolisHastings{() => 
-      do Sample (Gaussian(0.0, 1.0))
-    }
-  }
+  //handleLimitEmit[Double,Unit](10){ metropolisHastings{() => 
+  //    do Sample (Gaussian(0.0, 1.0))
+  //  }
+  //}
 
   println("\n")
   // testing sliceSampling
