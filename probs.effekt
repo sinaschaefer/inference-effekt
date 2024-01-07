@@ -2,7 +2,6 @@ module probs
 import immutable/list
 
 extern pure def pow(x: Double, y: Double): Double = "Math.pow(x, y)"
-extern pure def gamma(n: Double): Double = "Math.gamma(n)"
 
 effect Sample(dist: Distribution): Double
 effect Observe(value: Double, dist: Distribution): Unit
@@ -45,6 +44,48 @@ def draw(dist: Distribution): Double / Random = {
       val variance = 1.0 /(4.0 * ((2.0 * alpha) + 1.0))
       return draw(Gaussian(mean, variance))
   } 
+}
+
+def gamma(z0: Double): Double = {
+  var z = z0
+  //g is a small integer and p ist liste von coeficients dependent on g
+  val g = 7.0 
+  val p = [0.99999999999980993,
+    676.5203681218851,
+    -1259.1392167224028,
+    771.32342877765313,
+    -176.61502916214059,
+    12.507343278686905,
+    -0.13857109526572012,
+    9.9843695780195716 * pow(10.0, 0.0-6.0),
+    1.5056327351493116 * pow(10.0, 0.0-7.0)] 
+
+  // takes the i-th element of a list
+  def takeith(i: Double, p0: List[Double]): Double = {
+    p0 match {
+      case Nil() => panic("empty list")
+      case Cons(p, ps) =>
+        if(i == 1.0) {p}
+        else {takeith(i - 1.0, ps)}
+    }
+  }
+
+  //lanczos approximation
+  if (z < 0.5) {
+    val y = PI / (sin(PI * z) * gamma(1.0 - z))
+    return y
+  } else {
+    z = z - 1.0
+    var x = takeith(1.0, p)
+    var i = 2.0
+    while(i <= 9.0){
+      x = x + (takeith(i, p) / (z + i - 1.0))
+      i = i + 1.0
+    }
+    val t = z + g + 0.5
+    val y = sqrt(2.0 * PI) * pow(t, (z + 0.5)) * exp(0.0 - t) * x
+    return y
+  }
 }
 
 //probability density function for Gaussian distribution
