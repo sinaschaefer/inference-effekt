@@ -206,19 +206,42 @@ def propose(trace: Trace): Trace / Sample = {
 //generation proposal for single-site MH
 // adding noise to only one sample per iteration otherwise reuse trace
 def proposeSingleSite(trace: Trace): Trace / Sample = {
-  trace match {
-    case Nil() => []
-    case Cons(t, ts) =>
-      val noise = do Sample(Gaussian(0.0, 1.0))
-      val proposal = t + noise
-      Cons(proposal, ts)
-  }
-}
+  val tsize = toDouble(size(trace))
+  val rand = do Sample(Uniform(1.0, tsize))
+  var result = []
 
+  def putAti(i: Double, p0: List[Double]): List[Double] = {
+    p0 match {
+      case Nil() => result
+      case Cons(p, ps) =>
+        if(i == 1.0) {
+          val noise = do Sample(Gaussian(0.0, 1.0))
+          result = append(result, [p + noise])
+          putAti(i - 1.0, ps)
+        }
+        else {
+          result = append(result, [p])
+          putAti(i - 1.0, ps)
+        }
+    }
+  }
+
+  putAti(toDouble(floor(rand)), trace)
+}
 
 // 1 iteration/step of Metropolis-Hastings algorithm
 def metropolisStep[A](prob0: Probability, trace0: Trace){program: Trace => (A, Probability)} = {
   val trace1 = propose(trace0)
+  val (result1, prob1) = program(trace1)
+
+  if(prob1 < prob0){
+    do Weight(prob1 / prob0)
+  }
+  ((result1, trace1), prob1)
+}
+
+def metropolisStepSingleSite[A](prob0: Probability, trace0: Trace){program: Trace => (A, Probability)} = {
+  val trace1 = proposeSingleSite(trace0)
   val (result1, prob1) = program(trace1)
 
   if(prob1 < prob0){
@@ -274,6 +297,33 @@ def metropolisHastings[A]{program: () => A / {Sample, Weight}} = {
   loop(result0, trace0, prob0)
 }
 
+def metropolisHastingsSingleSite[A]{program: () => A / {Sample, Weight}} = {
+  val ((result0, trace0), prob0) = handleWeight{
+    handleRandom{
+      handleSample{
+        handleTracing{
+          program()
+        }
+      }
+    }
+  }
+
+  def loop(result: A, trace: Trace, prob: Probability): Unit / Emit[A] = {
+    do emit(result)
+    val ((result1, trace1), prob1) =
+    handleRandom{
+      handleSample{
+        rejectionSampling{
+          metropolisStepSingleSite(prob, trace){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
+        }
+      }
+    }
+    loop(result1, trace1, prob1)
+  }  
+
+  loop(result0, trace0, prob0)
+}
+
 //MCMC algorithm for drawing 'random' numbers from distribution
 def sliceSampling[R](){program: () => R / Weight} = {
   val (result, prob) = handleWeight{program()}
@@ -311,15 +361,21 @@ def main() = {
   //println("\n")
 
   // testing Metropolis-Hastings
-  //handleLimitEmit[Double,Unit](10){ metropolisHastings{() => 
-  //    do Sample (Gaussian(0.0, 1.0))
-  //  }
-  //}
+  println("testing MH on Gaussian distribution with mean=0, variance=1")
+  handleLimitEmit[Double,Unit](10){metropolisHastings{() => 
+      do Sample (Gaussian(0.0, 1.0))
+    }
+  }
 
-  println("\n")
+  println("\n testing SingleSite MH on Gaussian distribution with mean=0, variance=1")
+  handleLimitEmit[Double,Unit](10){metropolisHastingsSingleSite{() => 
+      do Sample (Gaussian(0.0, 1.0))
+    }
+  }
+
   // testing sliceSampling
+  println("\n testing Silce sampling on Gaussian distribution with mean=0, variance=1")
   handleLimitEmit[Double, Unit](10){handleRandom{handleSample{sliceSampling{
     do Sample(Gaussian(0.0, 1.0))
   }}}}
-
 }
