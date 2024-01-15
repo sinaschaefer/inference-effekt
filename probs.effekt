@@ -14,7 +14,7 @@ interface Emit[A] {
 type Distribution{
   Gaussian(mean: Double, variance: Double)
   Uniform(lower: Double, upper: Double)
-  Beta(alpha: Double, beta: Double)
+  Beta(mean: Double, sampleSize: Double)
 }
 type Probability = Double
 type Trace = List[Double]
@@ -39,10 +39,8 @@ def draw(dist: Distribution): Double / Random = {
       val x = do Random()
       return (lower + x * upper)
     
-    case Beta(alpha, beta) => 
-      val mean = 0.5
-      val variance = 1.0 /(4.0 * ((2.0 * alpha) + 1.0))
-      return draw(Gaussian(mean, variance))
+    case Beta(mean, sampleSize) => 
+      return draw(Gaussian(mean, sampleSize))
   } 
 }
 
@@ -99,7 +97,9 @@ def density(value: Double, dist: Distribution): Double = {
       if(lower < value && value < upper){ 1.0 / (upper - lower)}
       else {0.0}
     
-    case Beta(alpha, beta) =>
+    case Beta(mean, sampleSize) =>
+      val alpha = mean * sampleSize
+      val beta = (1.0 - mean) * sampleSize
       val density = (gamma(alpha + beta)/(gamma(alpha) * gamma(beta))) * pow(value, (alpha - 1.0)) * pow((value - 1.0), (beta - 1.0))
       return density
   }

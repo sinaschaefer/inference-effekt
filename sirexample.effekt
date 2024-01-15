@@ -18,7 +18,9 @@ def progression(p: Population): Population = {
 def test(p: Population, pr: Double): Unit / Observe = {
   p match {
     case Population(s, i, r) =>
-      do Observe(pr, Beta(2.0, 3.0))
+      val mean = i 
+      val sampleSize = 100
+      do Observe(pr, Beta(i, 100.0))
   }
 }
 
