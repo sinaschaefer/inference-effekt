@@ -122,11 +122,11 @@ def handleRandom[R]{program: () => R / Random}: R = {
 }
 
 //rejection sampling
-def rejectionSampling[R]{program: () => R / Weight}: R / Random = {
+def handleRejection[R]{program: () => R / Weight}: R / Random = {
   try {program()}
   with Weight {(prob) => 
     if(do Random() < prob) {resume(())}
-    else {rejectionSampling{program}}
+    else {handleRejection{program}}
   }
 }
 
@@ -261,32 +261,12 @@ def metropolisHastings[A]{program: () => A / {Sample, Weight}} = {
     }
   }
 
-  //var nextprob = prob0
-  //var nexttrace = trace0
-  //var nextresult = result0
-
-  //n mal metropolis step um nächste trace & prob zu bekommen
-  //handleWeight bei jedem aufruf von metropolisStep
-  //handleRandom handleSample auch bei jedem aufruf 
-  //while (true) {
-  //  //mStep
-  //  val ((nextresult, nexttrace), nextprob) =
-  //  handleRandom{
-  //    handleSample{
-  //      rejectionSampling{
-  //        metropolisStep(nextprob, nexttrace){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
-  //      }
-  //    }
-  //  }
-  //  do emit(nextresult)
-  //}
-
   def loop(result: A, trace: Trace, prob: Probability): Unit / Emit[A] = {
     do emit(result)
     val ((result1, trace1), prob1) =
     handleRandom{
       handleSample{
-        rejectionSampling{
+        handleRejection{
           metropolisStep(prob, trace){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
         }
       }
@@ -313,7 +293,7 @@ def metropolisHastingsSingleSite[A]{program: () => A / {Sample, Weight}} = {
     val ((result1, trace1), prob1) =
     handleRandom{
       handleSample{
-        rejectionSampling{
+        handleRejection{
           metropolisStepSingleSite(prob, trace){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
         }
       }
@@ -328,7 +308,7 @@ def metropolisHastingsSingleSite[A]{program: () => A / {Sample, Weight}} = {
 def sliceSampling[R](){program: () => R / Weight} = {
   val (result, prob) = handleWeight{program()}
   
-  def step(result0: R, prob0: Probability) = rejectionSampling{
+  def step(result0: R, prob0: Probability) = handleRejection{
     val (result1, prob1) = handleWeight{program()}
     if (prob1 < prob0) {do Weight(prob1 / prob0)}
     (result1, prob1)
