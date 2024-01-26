@@ -40,7 +40,8 @@ def draw(dist: Distribution): Double / Random = {
       return (lower + x * upper)
     
     case Beta(mean, sampleSize) => 
-      return draw(Gaussian(mean, sampleSize))
+      val alpha = mean * sampleSize
+      return draw(Gaussian(0.5, 1.0/(4.0 * (2.0 * alpha + 1.0))))
   } 
 }
 
@@ -100,7 +101,7 @@ def density(value: Double, dist: Distribution): Double = {
     case Beta(mean, sampleSize) =>
       val alpha = mean * sampleSize
       val beta = (1.0 - mean) * sampleSize
-      val density = (gamma(alpha + beta)/(gamma(alpha) * gamma(beta))) * pow(value, (alpha - 1.0)) * pow((value - 1.0), (beta - 1.0))
+      val density = (gamma(alpha + beta)/(gamma(alpha) * gamma(beta))) * pow(value, (alpha - 1.0)) * pow((1.0 - value), (beta - 1.0))
       return density
   }
 }
@@ -207,26 +208,23 @@ def propose(trace: Trace): Trace / Sample = {
 // adding noise to only one sample per iteration otherwise reuse trace
 def proposeSingleSite(trace: Trace): Trace / Sample = {
   val tsize = toDouble(size(trace))
-  val rand = do Sample(Uniform(1.0, tsize))
-  var result = []
+  val rand = do Sample(Uniform(0.0, tsize))
 
-  def putAti(i: Double, p0: List[Double]): List[Double] = {
+  def putAti(i: Int, p0: List[Double]): List[Double] = {
     p0 match {
-      case Nil() => result
+      case Nil() => []
       case Cons(p, ps) =>
-        if(i == 1.0) {
+        if(i == 0) {
           val noise = do Sample(Gaussian(0.0, 1.0))
-          result = append(result, [p + noise])
-          putAti(i - 1.0, ps)
+          Cons(p + noise, ps)
         }
         else {
-          result = append(result, [p])
-          putAti(i - 1.0, ps)
+          Cons(p, putAti(i - 1, ps))
         }
     }
   }
 
-  putAti(toDouble(floor(rand)), trace)
+  putAti(floor(rand), trace)
 }
 
 // 1 iteration/step of Metropolis-Hastings algorithm
@@ -323,6 +321,37 @@ def sliceSampling[R](){program: () => R / Weight} = {
   loop(result, prob)
 }
 
+//wrapper für algorithmen
+def rejectionSampling[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
+  def loop(): Unit = {
+    handleRandom{handleSample{handleRejection{handleObserve{
+      do emit(program())
+    }}}}
+    loop()
+  }
+  loop()
+}
+
+def sliceSamplingWrap[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
+  handleRandom{handleSample{sliceSampling[R]{handleObserve{
+    program()
+  }}}}
+}
+
+def metropolisHastingsWrap[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
+  metropolisHastings[R]{handleObserve{
+    program()
+  }
+  }
+}
+
+def metropolisHastingsSingleSiteWrap[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
+  metropolisHastingsSingleSite[R]{handleObserve{
+    program()
+  }
+  }
+}
+
 def main() = {
   // testing the draw function
   //repeat(50){
@@ -339,6 +368,13 @@ def main() = {
   //}
   //println(res)
   //println("\n")
+
+  repeat(5){
+    val dr = handleRandom{density(0.3, Beta(0.2, 100.0))}
+    println(dr)
+  }
+
+  println("\n")
 
   // testing Metropolis-Hastings
   println("testing MH on Gaussian distribution with mean=0, variance=1")
