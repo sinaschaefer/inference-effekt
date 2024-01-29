@@ -42,9 +42,9 @@ def main() = {
   val t0 = timestamp()
   println(t0 - start)
 
-  println("testing with slice Sampling wrapper")
+  println("testing with slice Sampling")
   //kommt be beiden gleiches raus weil progressen nicht probabilistische operationen
-  handleLimitEmit[Population, Unit](2){sliceSamplingWrap[Population]{
+  handleLimitEmit[Population, Unit](2){sliceSampling[Population]{
     val init = Population(0.7, 0.2, 0.1)
     step(init, 0.3)
   }}
@@ -52,7 +52,7 @@ def main() = {
   println(t1 - t0)
   println("\n")
 
-  handleLimitEmit[Population, Unit](1){sliceSamplingWrap[Population]{
+  handleLimitEmit[Population, Unit](1){sliceSampling[Population]{
     var nextPop = Population(0.7, 0.2, 0.1)
     var nextpr = 0.4
     var m = 5
@@ -73,7 +73,7 @@ def main() = {
 
   println("\ntesting with Metropolis Hastings")
 
-  handleLimitEmit[Population, Unit](1){metropolisHastingsWrap[Population]{
+  handleLimitEmit[Population, Unit](1){metropolisHastings[Population]{
     var nextPop = Population(0.7, 0.2, 0.1)
     var nextpr = 0.4
     var m = 5
@@ -93,7 +93,7 @@ def main() = {
   println(t3 - t2)
 
   println("\ntesting with metropolis Hastings Single Site")
-  handleLimitEmit[Population, Unit](1){metropolisHastingsSingleSiteWrap[Population]{
+  handleLimitEmit[Population, Unit](1){metropolisHastingsSingleSite[Population]{
     var nextPop = Population(0.7, 0.2, 0.1)
     var nextpr = 0.4
     var m = 5

@@ -248,7 +248,7 @@ def metropolisStepSingleSite[A](prob0: Probability, trace0: Trace){program: Trac
   ((result1, trace1), prob1)
 }
 
-def metropolisHastings[A]{program: () => A / {Sample, Weight}} = {
+def metropolisHastingsAlgo[A]{program: () => A / {Sample, Weight}} = {
   val ((result0, trace0), prob0) = handleWeight{
     handleRandom{
       handleSample{
@@ -275,7 +275,7 @@ def metropolisHastings[A]{program: () => A / {Sample, Weight}} = {
   loop(result0, trace0, prob0)
 }
 
-def metropolisHastingsSingleSite[A]{program: () => A / {Sample, Weight}} = {
+def metropolisHastingsSingleSiteAlgo[A]{program: () => A / {Sample, Weight}} = {
   val ((result0, trace0), prob0) = handleWeight{
     handleRandom{
       handleSample{
@@ -303,7 +303,7 @@ def metropolisHastingsSingleSite[A]{program: () => A / {Sample, Weight}} = {
 }
 
 //MCMC algorithm for drawing 'random' numbers from distribution
-def sliceSampling[R](){program: () => R / Weight} = {
+def sliceSamplingAlgo[R](){program: () => R / Weight} = {
   val (result, prob) = handleWeight{program()}
   
   def step(result0: R, prob0: Probability) = handleRejection{
@@ -332,21 +332,21 @@ def rejectionSampling[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] =
   loop()
 }
 
-def sliceSamplingWrap[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
-  handleRandom{handleSample{sliceSampling[R]{handleObserve{
+def sliceSampling[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
+  handleRandom{handleSample{sliceSamplingAlgo[R]{handleObserve{
     program()
   }}}}
 }
 
-def metropolisHastingsWrap[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
-  metropolisHastings[R]{handleObserve{
+def metropolisHastings[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
+  metropolisHastingsAlgo[R]{handleObserve{
     program()
   }
   }
 }
 
-def metropolisHastingsSingleSiteWrap[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
-  metropolisHastingsSingleSite[R]{handleObserve{
+def metropolisHastingsSingleSite[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
+  metropolisHastingsSingleSiteAlgo[R]{handleObserve{
     program()
   }
   }
@@ -369,29 +369,22 @@ def main() = {
   //println(res)
   //println("\n")
 
-  repeat(5){
-    val dr = handleRandom{density(0.3, Beta(0.2, 100.0))}
-    println(dr)
-  }
-
-  println("\n")
-
   // testing Metropolis-Hastings
   println("testing MH on Gaussian distribution with mean=0, variance=1")
-  handleLimitEmit[Double,Unit](10){metropolisHastings{() => 
+  handleLimitEmit[Double,Unit](10){metropolisHastingsAlgo{() => 
       do Sample (Gaussian(0.0, 1.0))
     }
   }
 
   println("\n testing SingleSite MH on Gaussian distribution with mean=0, variance=1")
-  handleLimitEmit[Double,Unit](10){metropolisHastingsSingleSite{() => 
+  handleLimitEmit[Double,Unit](10){metropolisHastingsSingleSiteAlgo{() => 
       do Sample (Gaussian(0.0, 1.0))
     }
   }
 
   // testing sliceSampling
   println("\n testing Silce sampling on Gaussian distribution with mean=0, variance=1")
-  handleLimitEmit[Double, Unit](10){handleRandom{handleSample{sliceSampling{
+  handleLimitEmit[Double, Unit](10){handleRandom{handleSample{sliceSamplingAlgo{
     do Sample(Gaussian(0.0, 1.0))
   }}}}
 }

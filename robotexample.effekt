@@ -42,9 +42,9 @@ def main() = {
   val t0 = timestamp()
   println(t0 - start)
   
-  println("\ntesting with slice sampling wrapper")
+  println("\ntesting with slice sampling")
   handleLimitEmit[State, Unit](5){
-    sliceSamplingWrap[State]{
+    sliceSampling[State]{
       val init = State(0.0, 3.0, 2.0, 0.0)
       step(init, 5.0)
     }
@@ -53,7 +53,7 @@ def main() = {
   println(t1 - t0)
   println("\n")
 
-  handleLimitEmit[State, Unit](1){sliceSamplingWrap[State]{
+  handleLimitEmit[State, Unit](1){sliceSampling[State]{
     var nextState = State(0.0, 3.0, 2.0, 0.0)
     var nextdis = 5.0
     var m = 5
@@ -71,8 +71,8 @@ def main() = {
   println(t2 - t1)
 
   // testing robot with MH and multiple steps
-  println("\ntesting with metropolis hasting wrapper")
-  handleLimitEmit[State, Unit](1){metropolisHastingsWrap[State]{
+  println("\ntesting with metropolis hasting")
+  handleLimitEmit[State, Unit](1){metropolisHastings[State]{
     var nextState = State(0.0, 3.0, 2.0, 0.0)
     var nextdis = 5.0
     var m = 5
@@ -89,8 +89,8 @@ def main() = {
   val t3 = timestamp()
   println(t3 - t2)
 
-  println("\ntesting with metropolis hastings single site wrapper")
-  handleLimitEmit[State, Unit](1){metropolisHastingsSingleSiteWrap[State]{
+  println("\ntesting with metropolis hastings single site")
+  handleLimitEmit[State, Unit](1){metropolisHastingsSingleSite[State]{
     var nextState = State(0.0, 3.0, 2.0, 0.0)
     var nextdis = 5.0
     var m = 5
