@@ -6,7 +6,7 @@ record State(x: Double, y: Double, vx: Double, vy: Double)
 type Measurement = Double
 
 // movement of the robot in one time intervall
-def move(s: State): State / Sample = {
+def move(s: State): State / {Sample} = {
   s match {
     case State(x, y, vx, vy) =>
       val xa = do Sample(Gaussian(0.0, 1.0))
@@ -35,25 +35,24 @@ def main() = {
   val start = timestamp()
 
   println("testing with rejectionSampling")
-  handleLimitEmit[State, Unit](5){rejectionSampling[State]{
+  rejectionSampling[State](5){
     val init = State(0.0, 3.0, 2.0, 0.0)
     step(init, 5.0)
-  }}
+  }
   val t0 = timestamp()
   println(t0 - start)
   
   println("\ntesting with slice sampling")
-  handleLimitEmit[State, Unit](5){
-    sliceSampling[State]{
-      val init = State(0.0, 3.0, 2.0, 0.0)
-      step(init, 5.0)
-    }
+  sliceSampling[State](5){
+    val init = State(0.0, 3.0, 2.0, 0.0)
+    step(init, 5.0)
   }
+
   val t1 = timestamp()
   println(t1 - t0)
   println("\n")
 
-  handleLimitEmit[State, Unit](1){sliceSampling[State]{
+  sliceSampling[State](1){
     var nextState = State(0.0, 3.0, 2.0, 0.0)
     var nextdis = 5.0
     var m = 5
@@ -66,13 +65,13 @@ def main() = {
       m = m - 1
     }
     return nextState
-  }}
+  }
   val t2 = timestamp() 
   println(t2 - t1)
 
   // testing robot with MH and multiple steps
   println("\ntesting with metropolis hasting")
-  handleLimitEmit[State, Unit](1){metropolisHastings[State]{
+  metropolisHastings[State](1){
     var nextState = State(0.0, 3.0, 2.0, 0.0)
     var nextdis = 5.0
     var m = 5
@@ -85,12 +84,12 @@ def main() = {
       m = m - 1
     }
     return nextState
-  }}
+  }
   val t3 = timestamp()
   println(t3 - t2)
 
   println("\ntesting with metropolis hastings single site")
-  handleLimitEmit[State, Unit](1){metropolisHastingsSingleSite[State]{
+  metropolisHastingsSingleSite[State](1){
     var nextState = State(0.0, 3.0, 2.0, 0.0)
     var nextdis = 5.0
     var m = 5
@@ -103,7 +102,7 @@ def main() = {
       m = m - 1
     }
     return nextState
-  }}
+  }
   val t4 = timestamp()
   println(t4 - t3)
 }

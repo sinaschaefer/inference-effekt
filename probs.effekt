@@ -322,34 +322,32 @@ def sliceSamplingAlgo[R](){program: () => R / Weight} = {
 }
 
 //wrapper für algorithmen
-def rejectionSampling[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
-  def loop(): Unit = {
+def rejectionSampling[R](n: Int){program: () => R / {Sample, Observe}}: Unit = {
+  def loop(): Unit / Emit[R]= {
     handleRandom{handleSample{handleRejection{handleObserve{
       do emit(program())
     }}}}
     loop()
   }
-  loop()
+  handleLimitEmit[R, Unit](n){loop()}
 }
 
-def sliceSampling[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
-  handleRandom{handleSample{sliceSamplingAlgo[R]{handleObserve{
+def sliceSampling[R](n: Int){program: () => R / {Sample, Observe}}: Unit = {
+  handleLimitEmit[R,Unit](n){handleRandom{handleSample{sliceSamplingAlgo[R]{handleObserve{
     program()
-  }}}}
+  }}}}}
 }
 
-def metropolisHastings[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
-  metropolisHastingsAlgo[R]{handleObserve{
+def metropolisHastings[R](n: Int){program: () => R / {Sample, Observe}}: Unit = {
+  handleLimitEmit[R, Unit](n){metropolisHastingsAlgo[R]{handleObserve{
     program()
-  }
-  }
+  }}}
 }
 
-def metropolisHastingsSingleSite[R]{program: () => R / {Sample, Observe}}: Unit / Emit[R] = {
-  metropolisHastingsSingleSiteAlgo[R]{handleObserve{
+def metropolisHastingsSingleSite[R](n: Int){program: () => R / {Sample, Observe}}: Unit = {
+  handleLimitEmit[R, Unit](n){metropolisHastingsSingleSiteAlgo[R]{handleObserve{
     program()
-  }
-  }
+  }}}
 }
 
 def main() = {

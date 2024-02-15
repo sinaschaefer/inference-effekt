@@ -39,11 +39,12 @@ Using this version of `propose` we get the Single-Site Metropolis-Hastings algor
 This algorithm can be used to draw random samples from a distribution, it is a Markov chain Monte Carlo type algorithm.
 
 ## Wrapper
-All inference Algorithm constructed in this library have a wrapper with which it is possible to use the algorithms without having to use the effect handler since they are built into the wrappers. Only `handleLimitEmit` has to be used because of the number of steps the algorithm should perform.
+All inference algorithms constructed in this library have a wrapper with which it is possible to use the algorithms without having to use the effect handler since they are built into the wrappers. Because of `handleLimitEmit` it is necessary to give the wrapper an integer `n` that represents the number of steps the algorithm should perform.
 Following algorithms are included in this library `rejectionSampling` `sliceSampling` `metropolisHastings` `metropolisHastingsSingleSite`.
 
-    handleLimitEmit[R,A](1){metropolisHastingsSingleSite[R]{...}}
+    metropolisHastingsSingleSite[R](n){...}
 
+This is an example on how calling the algorithm `metropolisHastingsSingleSite` works, where `R` is the return Type of the example/program one wants to apply the algorithm to. E.g. in the robot example this is `State` a user defined type. 
 ## Examples
 ### Linear Regression
 This example uses linear regression which is an analysis method to predict values based on values that are already given. Here we want to approximate the slope and the y-intercept of a linear graph given points the graph crosses.
