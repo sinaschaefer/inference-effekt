@@ -13,8 +13,9 @@ def linearRegression(observations: List[(Double, Double)]) = {
 }
 
 def main() = {
+  val start = timestamp()
   // testing of linear regression for m= 1, c = 0
-  repeat(10){
+  repeat(5){
     val result = handleRandom{
       handleRejection{
         handleSample{
@@ -27,4 +28,15 @@ def main() = {
   
     println(result)
   }
+  val t0 = timestamp()
+  println(t0 - start)
+
+  //possible only with rejection sampling because rs is just handlers not full algorithm
+  println("\nin rejection Sampling")
+  rejectionSampling[(Double, Double)](5){
+    linearRegression([(5.0, 5.0), (1.0, 1.0), (-2.0, -2.0), (3.0, 3.0), (20.0, 20.0), (5.0, 5.0)])
+  }
+
+  val t1 = timestamp()
+  println(t1 - t0)
 }
