@@ -91,7 +91,7 @@ def gamma(z0: Double): Double = {
 def density(value: Double, dist: Distribution): Double = {
   dist match {
     case Gaussian(mean, variance) =>
-      val density = 1.0/(variance * (sqrt(2.0 * PI))) * exp(0.0 - (square(value - mean)/square(variance))/ 2.0)
+      val density = 1.0/(sqrt(variance) * (sqrt(2.0 * PI))) * exp((0.0 - 1.0/2.0) * (square(value - mean) / variance))
       return density
     
     case Uniform(lower, upper) => 
