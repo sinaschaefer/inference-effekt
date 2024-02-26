@@ -153,18 +153,6 @@ def handleReusingTrace[R](trace0: Trace){program: () => R / Sample} = {
 }
 
 // wenn sample dann sample + in trace speichern
-//resune nach cons -> falsche reihenfolge
-//def handleTracing[R]{program: () => R / Sample}: (R, Trace) / Sample = {
-//  var trace = []
-//
-//  try {(program(), trace)}
-//  with Sample {(dist) => 
-//    val sample = do Sample(dist);
-//    trace = Cons(sample, trace)
-//    resume(sample);
-//  }
-//}
-
 def handleTracing[R]{program: () => R / Sample}: (R, Trace) / Sample = {
   try {(program(), [])}
   with Sample {(dist) => 
@@ -199,7 +187,7 @@ def propose(trace: Trace): Trace / Sample = {
     case Nil() => [] 
     case Cons(t, ts) => 
       val noise = do Sample(Gaussian(0.0, 1.0))
-      val proposal = t + noise
+      val proposal =  noise
       Cons(proposal, propose(ts)) 
   }
 }
@@ -216,7 +204,7 @@ def proposeSingleSite(trace: Trace): Trace / Sample = {
       case Cons(p, ps) =>
         if(i == 0) {
           val noise = do Sample(Gaussian(0.0, 1.0))
-          Cons(p + noise, ps)
+          Cons(noise, ps)
         }
         else {
           Cons(p, putAti(i - 1, ps))
@@ -352,9 +340,9 @@ def metropolisHastingsSingleSite[R](n: Int){program: () => R / {Sample, Observe}
 
 def main() = {
   // testing the draw function
-  //repeat(50){
+  //repeat(100){
   //  val dr = handleRandom{
-  //    draw(Gaussian(0.0, 1.0))
+  //    draw(Beta(0.7, 3.0))
   //  }
   //  println(dr)
   //}
@@ -368,21 +356,24 @@ def main() = {
   //println("\n")
 
   // testing Metropolis-Hastings
-  println("testing MH on Gaussian distribution with mean=0, variance=1")
-  handleLimitEmit[Double,Unit](10){metropolisHastingsAlgo{() => 
-      do Sample (Gaussian(0.0, 1.0))
-    }
-  }
-
-  println("\n testing SingleSite MH on Gaussian distribution with mean=0, variance=1")
-  handleLimitEmit[Double,Unit](10){metropolisHastingsSingleSiteAlgo{() => 
-      do Sample (Gaussian(0.0, 1.0))
-    }
-  }
-
-  // testing sliceSampling
-  println("\n testing Silce sampling on Gaussian distribution with mean=0, variance=1")
-  handleLimitEmit[Double, Unit](10){handleRandom{handleSample{sliceSamplingAlgo{
+  //println("testing MH on Gaussian distribution with mean=0, variance=1")
+  //handleLimitEmit[Double,Unit](100){metropolisHastingsAlgo{() => 
+  //    do Sample (Gaussian(0.0, 1.0))
+  //  }
+  //}
+  metropolisHastings(10){
     do Sample(Gaussian(0.0, 1.0))
-  }}}}
+  }
+
+  //println("\n testing SingleSite MH on Gaussian distribution with mean=0, variance=1")
+  //handleLimitEmit[Double,Unit](100){metropolisHastingsSingleSiteAlgo{() => 
+  //    do Sample (Gaussian(0.0, 1.0))
+  //  }
+  //}
+
+  //// testing sliceSampling
+  //println("\n testing Silce sampling on Gaussian distribution with mean=0, variance=1")
+  //sliceSampling(100){
+  //  do Sample(Gaussian(0.0, 1.0))
+  //}
 }
