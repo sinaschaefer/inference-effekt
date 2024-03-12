@@ -107,10 +107,9 @@ def density(value: Double, dist: Distribution): Double = {
 }
 
 // default Sample und Observe handler
-def handleSample[R]{program: () => R / Sample}: (R, Distribution) / Random = {
-  var idfk = Gaussian(0.0, 1.0)
-  try {(program(), idfk)}
-  with Sample {(dist) => idfk = dist; resume(draw(dist))}
+def handleSample[R]{program: () => R / Sample} = {
+  try {program()}
+  with Sample {(dist) => resume(draw(dist))}
 }
 
 def handleObserve[R]{program: () => R / Observe} = {
@@ -142,13 +141,15 @@ def handleWeight[R]{program: () => R / Weight}: (R, Double)  = {
 
 //Metropolis Hastings auxiliary definitions and inference Operations
 // wenn sample dann nächstes element sonst panic("message")
-def handleReusingTrace[R](trace0: Trace){program: () => R / Sample} = {
+def handleReusingTrace[R](trace0: Trace){program: () => R / Sample} = handleObserve{
   var trace = trace0
   try {program()}
   with Sample {(dist) =>
     trace match {
       case Nil() => panic("empty trace")
-      case Cons(t, ts) => trace = ts; resume(t) 
+      case Cons(t, ts) => 
+        do Observe(t, dist)
+        trace = ts; resume(t) 
     }
   }
 }
@@ -183,19 +184,19 @@ def handleLimitEmit[A,R](n: Int){program: () => R / Emit[A]} = {
 
 // generatin proposal by adding gausain noise(normal noise)
 // adding noise to all rekursiv -> independent MH
-def propose(trace: Trace, dist: Distribution): Trace / Sample = {
+def propose(trace: Trace): Trace / Sample = {
   trace match {
     case Nil() => [] 
     case Cons(t, ts) => 
-      val noise = do Sample(dist) //noise an verteilung anpassen
-      val proposal = noise
-      Cons(proposal, propose(ts, dist)) 
+      val noise = do Sample(Gaussian(0.0, 1.0)) 
+      val proposal = t + noise
+      Cons(proposal, propose(ts)) 
   }
 }
 
 //generation proposal for single-site MH
 // adding noise to only one sample per iteration otherwise reuse trace
-def proposeSingleSite(trace: Trace, dist: Distribution): Trace / Sample = {
+def proposeSingleSite(trace: Trace): Trace / Sample = {
   val tsize = toDouble(size(trace))
   val rand = do Sample(Uniform(0.0, tsize))
 
@@ -204,8 +205,8 @@ def proposeSingleSite(trace: Trace, dist: Distribution): Trace / Sample = {
       case Nil() => []
       case Cons(p, ps) =>
         if(i == 0) {
-          val noise = do Sample(dist)
-          Cons(noise, ps)
+          val noise = do Sample(Gaussian(0.0, 1.0))
+          Cons(p + noise, ps)
         }
         else {
           Cons(p, putAti(i - 1, ps))
@@ -217,8 +218,8 @@ def proposeSingleSite(trace: Trace, dist: Distribution): Trace / Sample = {
 }
 
 // 1 iteration/step of Metropolis-Hastings algorithm
-def metropolisStep[A](prob0: Probability, trace0: Trace, dist0: Distribution){program: Trace => (A, Probability)} = {
-  val trace1 = propose(trace0, dist0)
+def metropolisStep[A](prob0: Probability, trace0: Trace){program: Trace => (A, Probability)} = {
+  val trace1 = propose(trace0)
   val (result1, prob1) = program(trace1)
 
   if(prob1 < prob0){
@@ -227,8 +228,8 @@ def metropolisStep[A](prob0: Probability, trace0: Trace, dist0: Distribution){pr
   ((result1, trace1), prob1)
 }
 
-def metropolisStepSingleSite[A](prob0: Probability, trace0: Trace, dist0: Distribution){program: Trace => (A, Probability)} = {
-  val trace1 = proposeSingleSite(trace0, dist0)
+def metropolisStepSingleSite[A](prob0: Probability, trace0: Trace){program: Trace => (A, Probability)} = {
+  val trace1 = proposeSingleSite(trace0)
   val (result1, prob1) = program(trace1)
 
   if(prob1 < prob0){
@@ -238,7 +239,7 @@ def metropolisStepSingleSite[A](prob0: Probability, trace0: Trace, dist0: Distri
 }
 
 def metropolisHastingsAlgo[A]{program: () => A / {Sample, Weight}} = {
-  val (((result0, trace0), dist0), prob0) = handleWeight{
+  val ((result0, trace0), prob0) = handleWeight{
     handleRandom{
       handleSample{
         handleTracing{
@@ -248,24 +249,24 @@ def metropolisHastingsAlgo[A]{program: () => A / {Sample, Weight}} = {
     }
   }
 
-  def loop(result: A, trace: Trace, dist: Distribution, prob: Probability): Unit / Emit[A] = {
+  def loop(result: A, trace: Trace, prob: Probability): Unit / Emit[A] = {
     do emit(result)
-    val (((result1, trace1), prob1), dist1) =
+    val ((result1, trace1), prob1) =
     handleRandom{
       handleSample{
         handleRejection{
-          metropolisStep(prob, trace, dist){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
+          metropolisStep(prob, trace){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
         }
       }
     }
-    loop(result1, trace1, dist1, prob1)
+    loop(result1, trace1, prob1)
   }
 
-  loop(result0, trace0, dist0, prob0)
+  loop(result0, trace0, prob0)
 }
 
 def metropolisHastingsSingleSiteAlgo[A]{program: () => A / {Sample, Weight}} = {
-  val (((result0, trace0), dist0), prob0) = handleWeight{
+  val ((result0, trace0), prob0) = handleWeight{
     handleRandom{
       handleSample{
         handleTracing{
@@ -275,31 +276,31 @@ def metropolisHastingsSingleSiteAlgo[A]{program: () => A / {Sample, Weight}} = {
     }
   }
 
-  def loop(result: A, trace: Trace, dist: Distribution, prob: Probability): Unit / Emit[A] = {
+  def loop(result: A, trace: Trace, prob: Probability): Unit / Emit[A] = {
     do emit(result)
-    val (((result1, trace1), prob1), dist1) =
+    val ((result1, trace1), prob1)=
     handleRandom{
       handleSample{
         handleRejection{
-          metropolisStepSingleSite(prob, trace, dist){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
+          metropolisStepSingleSite(prob, trace){ trace => handleWeight { handleReusingTrace(trace) { program() } } }
         }
       }
     }
-    loop(result1, trace1, dist1, prob1)
+    loop(result1, trace1, prob1)
   }  
 
-  loop(result0, trace0, dist0, prob0)
+  loop(result0, trace0, prob0)
 }
 
 //MCMC algorithm for drawing 'random' numbers from distribution
-def sliceSamplingAlgo[R](){program: () => R / {Sample, Weight}} = {
-  val ((result, prob), dist) = handleRandom{handleSample{handleWeight{program()}}}
+def sliceSamplingAlgo[R](){program: () => R / Weight} = {
+  val (result, prob) = handleRandom{handleSample{handleWeight{program()}}}
   
-  def step(result0: R, prob0: Probability) = handleRandom{handleRejection{
-    val ((result1, prob1), dist1) = handleSample{handleWeight{program()}}
+  def step(result0: R, prob0: Probability) = handleRejection{
+    val (result1, prob1) = handleWeight{program()}
     if (prob1 < prob0) {do Weight(prob1 / prob0)}
     (result1, prob1)
-  }}
+  }
 
   def loop(result: R, prob: Probability): Unit / Emit[R] = {
     do emit(result)
@@ -322,9 +323,9 @@ def rejectionSampling[R](n: Int){program: () => R / {Sample, Observe}}: Unit = {
 }
 
 def sliceSampling[R](n: Int){program: () => R / {Sample, Observe}}: Unit = {
-  handleLimitEmit[R,Unit](n){sliceSamplingAlgo[R]{handleObserve{
+  handleLimitEmit[R,Unit](n){handleRandom{handleSample{sliceSamplingAlgo[R]{handleObserve{
     program()
-  }}}
+  }}}}}
 }
 
 def metropolisHastings[R](n: Int){program: () => R / {Sample, Observe}}: Unit = {
@@ -348,40 +349,21 @@ def main() = {
   //  println(dr)
   //}
 
-  // testing handleReusingTrace
-  //val res = handleReusingTrace([0.7, 2.1]){ () => 
-  //  val a = do Sample(Gaussian(0.0, 1.0))  
-  //  return a
-  //}
-  //println(res)
-  //println("\n")
-
   // testing Metropolis-Hastings
-  //println("testing MH on Gaussian distribution with mean=0, variance=1")
-  //handleLimitEmit[Double,Unit](100){metropolisHastingsAlgo{() => 
-  //    do Sample (Gaussian(0.0, 1.0))
-  //  }
+  //metropolisHastings(100){
+  //  do Sample(Uniform(0.0, 10.0))
   //}
-  metropolisHastings(200){
-    do Sample(Gaussian(0.0,1.0))
-  }
 
   //metropolisHastingsSingleSite(100){
   //  do Sample(Gaussian(-3.0, 1.0))
   //}
 
-  //sliceSampling(50){
-  //  do Sample(Gaussian(5.0, 1.0))
-  //}
-
-  //println("\n testing SingleSite MH on Gaussian distribution with mean=0, variance=1")
-  //handleLimitEmit[Double,Unit](100){metropolisHastingsSingleSiteAlgo{() => 
-  //    do Sample (Gaussian(0.0, 1.0))
-  //  }
-  //}
+  //testing rejection Sampling
+  rejectionSampling(200){
+    do Sample(Gaussian(0.0, 1.0))
+  }
 
   //// testing sliceSampling
-  //println("\n testing Silce sampling on Gaussian distribution with mean=0, variance=1")
   //sliceSampling(100){
   //  do Sample(Gaussian(0.0, 1.0))
   //}
