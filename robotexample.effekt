@@ -26,9 +26,9 @@ def measure(s: State, m: Measurement): Unit / Observe = {
 
 // approximates next step based on current position and next distance measurement
 def step(s0: State, m1: Measurement): State / {Sample,Observe} = {
-  val se = move(s0)
-  measure(se, m1)
-  return se
+  val s1 = move(s0)
+  measure(s1, m1)
+  return s1
 }
 
 def main() = {
