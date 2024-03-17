@@ -34,23 +34,32 @@ def step(p0: Population, pr1: Double): Population / {Sample, Observe} = {
 
 def main() = {
   val start = timestamp()
+
+  //dummy aufruf für timestamps
+  rejectionSampling(1){
+    step(Population(0.8, 0.1, 0.1), 0.5)
+  }
+  val t = timestamp()
+  println("\n")
   
+  //rejection Sampling
   println("testing with rejection Sampling")
-  rejectionSampling[Population](1){
+  rejectionSampling[Population](5){
     val init = Population(0.7, 0.2, 0.1)
     step(init, 0.5)
   }
   val t0 = timestamp()
-  println(t0 - start)
+  println(t0 - t)
+  println("\n")
 
+  //slice sampling
   println("testing with slice Sampling")
-  //kommt be beiden gleiches raus weil progressen nicht probabilistische operationen
   sliceSampling[Population](5){
     val init = Population(0.7, 0.2, 0.1)
     step(init, 0.5)
   }
-  val t1 = timestamp()
-  println(t1 - t0)
+  val t2 = timestamp()
+  println(t2 - t0)
   println("\n")
 
   sliceSampling[Population](1){
@@ -69,17 +78,17 @@ def main() = {
     }
     return nextPop
   }
-  val t2 = timestamp()
-  println(t2 - t1)
+  val t3 = timestamp()
+  println(t3 - t2)
 
+  //metropolis-hastings
   println("\ntesting with Metropolis Hastings")
-
   metropolisHastings[Population](5){
     val init = Population(0.7, 0.2, 0.1)
     step(init, 0.8)
   }
-  val t8 = timestamp()
-  println(t8 - t2)
+  val t4 = timestamp()
+  println(t4 - t3)
   println("\n")
 
   metropolisHastings[Population](1){
@@ -98,10 +107,19 @@ def main() = {
     }
     return nextPop
   }
-  val t3 = timestamp()
-  println(t3 - t8)
+  val t5 = timestamp()
+  println(t5 - t4)
 
+  //metropolis-hastings single site
   println("\ntesting with metropolis Hastings Single Site")
+  metropolisHastings[Population](5){
+    val init = Population(0.7, 0.2, 0.1)
+    step(init, 0.8)
+  }
+  val t6 = timestamp()
+  println(t6 - t5)
+  println("\n")
+
   metropolisHastingsSingleSite[Population](1){
     var nextPop = Population(0.7, 0.2, 0.1)
     var nextpr = 0.8
@@ -118,6 +136,6 @@ def main() = {
     }
     return nextPop
   }
-  val t4 = timestamp()
-  println(t4 - t3)
+  val t7 = timestamp()
+  println(t7 - t6)
 }

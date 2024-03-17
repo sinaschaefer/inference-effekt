@@ -349,6 +349,12 @@ def main() = {
   //  println(dr)
   //}
 
+  rejectionSampling(200){
+    val x = do Sample(Gaussian(0.0, 1.0))
+    do Observe(x, Uniform(0.0, 3.0))
+    return x
+  }
+
   // testing Metropolis-Hastings
   //metropolisHastings(100){
   //  do Sample(Uniform(0.0, 10.0))
@@ -359,9 +365,9 @@ def main() = {
   //}
 
   //testing rejection Sampling
-  rejectionSampling(200){
-    do Sample(Gaussian(0.0, 1.0))
-  }
+  //rejectionSampling(200){
+  //  do Sample(Gaussian(0.0, 1.0))
+  //}
 
   //// testing sliceSampling
   //sliceSampling(100){
