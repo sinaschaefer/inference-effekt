@@ -1,4 +1,5 @@
 import probs
+import immutable/list
 
 //population so that number of s + i + r = 1
 record Population(susceptible: Double, infected: Double, recovered: Double)
@@ -52,6 +53,29 @@ def main() = {
   println(t0 - t)
   println("\n")
 
+  rejectionSampling[List[Population]](1){
+    var nextPop = Population(0.7, 0.2, 0.1)
+    var nextpr = 0.3
+    var m = 5
+    var path : List[Population] = [nextPop]
+
+    while(m > 0){
+      nextPop = step(nextPop, nextpr)
+    
+      val noise = do Sample(Gaussian(0.0, 0.01))
+      var nextpr1 = nextpr + noise
+      if(not(nextpr1 < 0.0 || nextpr1 > 1.0)){nextpr = nextpr1}
+
+      path = append(path, [nextPop])
+      m = m - 1
+    }
+    return path
+  }
+
+  val t1 = timestamp()
+  println(t1 -t0)
+  println("\n")
+
   //slice sampling
   println("testing with slice Sampling")
   sliceSampling[Population](5){
@@ -59,13 +83,14 @@ def main() = {
     step(init, 0.5)
   }
   val t2 = timestamp()
-  println(t2 - t0)
+  println(t2 - t1)
   println("\n")
 
-  sliceSampling[Population](1){
+  sliceSampling[List[Population]](1){
     var nextPop = Population(0.7, 0.2, 0.1)
     var nextpr = 0.8
     var m = 5
+    var path : List[Population] = [nextPop]
 
     while(m > 0){
       nextPop = step(nextPop, nextpr)
@@ -73,10 +98,10 @@ def main() = {
       var nextpr1 = nextpr + noise
       if(not(nextpr1 < 0.0 || nextpr1 > 1.0)){nextpr = nextpr1}
 
-      println(nextPop)
+      path = append(path, [nextPop])
       m = m - 1
     }
-    return nextPop
+    return path
   }
   val t3 = timestamp()
   println(t3 - t2)
@@ -91,10 +116,11 @@ def main() = {
   println(t4 - t3)
   println("\n")
 
-  metropolisHastings[Population](1){
+  metropolisHastings[List[Population]](1){
     var nextPop = Population(0.7, 0.2, 0.1)
     var nextpr = 0.8
     var m = 5
+    var path : List[Population] = [nextPop]
 
     while(m > 0){
       nextPop = step(nextPop, nextpr)
@@ -102,10 +128,10 @@ def main() = {
       var nextpr1 = nextpr + noise
       if(not(nextpr1 < 0.0 || nextpr1 > 1.0)){nextpr = nextpr1}
 
-      println(nextPop)
+      path = append(path, [nextPop])
       m = m - 1
     }
-    return nextPop
+    return path
   }
   val t5 = timestamp()
   println(t5 - t4)
@@ -120,10 +146,11 @@ def main() = {
   println(t6 - t5)
   println("\n")
 
-  metropolisHastingsSingleSite[Population](1){
+  metropolisHastingsSingleSite[List[Population]](1){
     var nextPop = Population(0.7, 0.2, 0.1)
     var nextpr = 0.8
     var m = 5
+    var path : List[Population] = [nextPop]
 
     while(m > 0){
       nextPop = step(nextPop, nextpr)
@@ -131,10 +158,10 @@ def main() = {
       var nextpr1 = nextpr + noise
       if(not(nextpr1 < 0.0 || nextpr1 > 1.0)){nextpr = nextpr1}
 
-      println(nextPop)
+      path = append(path, [nextPop])
       m = m - 1
     }
-    return nextPop
+    return path
   }
   val t7 = timestamp()
   println(t7 - t6)

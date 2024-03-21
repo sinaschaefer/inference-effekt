@@ -48,6 +48,26 @@ def main() = {
   }
   val t0 = timestamp()
   println(t0 - t)
+  println("\n")
+
+  //rejection sampling consecutive; muss anders konstruiert werden
+  rejectionSampling[List[State]](1){
+    var nextState = State(0.0, 3.0, 2.0, 0.0)
+    var nextdis = 5.0
+    var m = 5
+    var path = [nextState]
+
+    while(m > 0){
+      nextState = step(nextState, nextdis)
+      val noise = do Sample(Gaussian(0.0, 1.0))
+      nextdis = nextdis + noise
+      path = append(path, [nextState])
+      m = m - 1
+    }
+    return path
+  }
+  val t9 = timestamp()
+  println(t9 - t0)
   
   println("\ntesting with slice sampling")
   sliceSampling[State](5){
@@ -56,22 +76,23 @@ def main() = {
   }
 
   val t1 = timestamp()
-  println(t1 - t0)
+  println(t1 - t9)
   println("\n")
 
-  sliceSampling[State](1){
+  sliceSampling[List[State]](1){
     var nextState = State(0.0, 3.0, 2.0, 0.0)
     var nextdis = 5.0
     var m = 5
+    var path = [nextState]
 
     while(m > 0){
       nextState = step(nextState, nextdis)
       val noise = do Sample(Gaussian(0.0, 1.0))
       nextdis = nextdis + noise
-      println (nextState)
+      path = append(path, [nextState])
       m = m - 1
     }
-    return nextState
+    return path
   }
   val t2 = timestamp() 
   println(t2 - t1)
@@ -87,19 +108,20 @@ def main() = {
   println(t3 - t2)
   println("\n")
 
-  metropolisHastings[State](1){
+  metropolisHastings[List[State]](1){
     var nextState = State(0.0, 3.0, 2.0, 0.0)
     var nextdis = 5.0
     var m = 5
+    var path = [nextState]
     
     while(m > 0){
       nextState = step(nextState, nextdis)
       val noise = do Sample(Gaussian(0.0, 1.0))
       nextdis = nextdis + noise
-      println (nextState)
+      path = append(path, [nextState])
       m = m - 1
     }
-    return nextState
+    return path
   }
   val t4 = timestamp()
   println(t4 - t3)
@@ -114,19 +136,20 @@ def main() = {
   println(t5 - t4)
   println("\n")
 
-  metropolisHastingsSingleSite[State](1){
+  metropolisHastingsSingleSite[List[State]](1){
     var nextState = State(0.0, 3.0, 2.0, 0.0)
     var nextdis = 5.0
     var m = 5
+    var path = [nextState]
     
     while(m > 0){
       nextState = step(nextState, nextdis)
       val noise = do Sample(Gaussian(0.0, 1.0))
       nextdis = nextdis + noise
-      println (nextState)
+      path = append(path, [nextState])
       m = m - 1
     }
-    return nextState
+    return path
   }
   val t6 = timestamp()
   println(t6 - t5)
